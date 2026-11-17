@@ -125,7 +125,7 @@ def bloomers(F, coll, mats):
     kk = 0.06; hh = np.clip(0.5 + 0.5 * (P.D - T.D) / kk, 0, 1)
     P.D = (P.D * (1 - hh) + T.D * hh - kk * hh * (1 - hh)).astype(np.float32)
     # waist sash hugging the belly line
-    G = C3.cloth_from_body(F, tuple(P.lo), tuple(P.lo + P.h * (P.n - 1)), 0.020, 0.040)
+    G = C3.cloth_from_body(F, tuple(P.lo), tuple(P.lo + P.h * (P.n - 1)), 0.022, 0.034)
     n = np.array([0, -0.27, 0.963]); n /= np.linalg.norm(n)
     plane = X * n[0] + (Y + 0.20) * n[1] + (Z - 1.005) * n[2]
     sash = np.maximum(G.D, np.abs(plane + 0.020) - 0.028)
@@ -160,7 +160,7 @@ def ruff(coll, mats):
     col = np.tile(CREAM * 1.1, (len(co), 1))
     for z, Rr, r, n, amp in layers:
         near = np.abs(co[:, 2] - z) < 0.016
-        col[near & (rad > Rr + amp * 0.85 + r * 0.55)] = RED
+        col[near & (rad > Rr + amp + r * 0.75)] = RED
     put(o, "fabric", col)
     return o
 
@@ -257,10 +257,10 @@ def axe(coll, mats):
     s, e, w, d = A.arm_points(-1)
     inward, across = A.hand_frame(-1, d)
     grip = w + d * 0.060 + inward * 0.030
-    hd = (-across).normalized()                      # handle runs across the closed fist
+    hd = (d * 0.35 + Vector((0.0, -0.25, -1.0))).normalized()   # hangs from the fist, head by the thigh
     bm = bmesh.new()
     seg = 8; L = 0.50
-    base = grip - hd * 0.12
+    base = grip - hd * 0.06
     ring = []
     for k in range(5):
         t = k / 4; c = base + hd * (L * t); r = 0.017 - 0.003 * t
@@ -275,6 +275,7 @@ def axe(coll, mats):
     # head: blade profile extruded, blade edge facing forward
     top = base + hd * L
     fwd = Vector((0, -1, 0)); fwd = (fwd - hd * fwd.dot(hd)).normalized(); side = hd.cross(fwd).normalized()
+    top = base + hd * L
     prof = [(-0.035, -0.020), (0.040, -0.030), (0.120, -0.075), (0.135, -0.010), (0.130, 0.055), (0.120, 0.075),
             (0.040, 0.028), (-0.035, 0.022), (-0.070, 0.010), (-0.070, -0.010)]
     bm = bmesh.new()
@@ -476,9 +477,28 @@ def unity_pack(tex, parts):
             Image.fromarray((ms * 255).astype(np.uint8), "RGBA").save(os.path.join(tex, f"{p}_MetallicSmoothness{suffix}.png"))
             mk = np.stack([met, ao, np.ones_like(ao), sm], -1)
             Image.fromarray((mk * 255).astype(np.uint8), "RGBA").save(os.path.join(tex, f"{p}_MaskMap{suffix}.png"))
-        for suffix in ("", "_Clean"):
-            os.remove(os.path.join(tex, f"{p}_Roughness{suffix}.png"))
         os.replace(os.path.join(tex, f"{p}_AO.png"), os.path.join(tex, f"{p}_Occlusion.png"))
+
+
+def pose_menace(rig):
+    """As in the concept: weight forward, head cocked, arms out at the sides with clawed hands, knees soft."""
+    BR.only([rig]); bpy.ops.object.mode_set(mode='POSE')
+    pb = rig.pose.bones
+
+    def turn(name, axis, deg, local=False):
+        b = pb[name]; bpy.context.view_layer.update()
+        ax = (b.matrix.to_3x3() @ Vector((1, 0, 0))).normalized() if local else Vector({'X': (1, 0, 0), 'Y': (0, 1, 0), 'Z': (0, 0, 1)}[axis])
+        h = b.head.copy()
+        b.matrix = Matrix.Translation(h) @ Matrix.Rotation(math.radians(deg), 4, ax) @ Matrix.Translation(-h) @ b.matrix
+        bpy.context.view_layer.update()
+    turn("Spine1", 'X', 5); turn("Neck", 'X', 4); turn("Head", 'X', 9); turn("Head", 'Y', 9)
+    for side, sx in (("Left", 1), ("Right", -1)):
+        turn(side + "ForeArm", 'X', 16)
+        for f in ("Index", "Middle", "Ring", "Pinky"):
+            for k in (1, 2, 3):
+                turn(f"{side}Hand{f}{k}", 'X', 22 if side == "Left" else 34, local=True)
+        turn(side + "UpLeg", 'X', -6); turn(side + "Leg", 'X', 11)
+    bpy.ops.object.mode_set(mode='OBJECT')
 
 
 def full():
@@ -529,7 +549,7 @@ def full():
         bpy.data.collections.remove(col)
     bpy.ops.outliner.orphans_purge(do_recursive=True) if bpy.context.area else None
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, "Clown.blend"), compress=True)
-    C3.pose_stalk(rig)
+    pose_menace(rig)
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, "Clown_posed.blend"), compress=True, copy=True)
     return total
 

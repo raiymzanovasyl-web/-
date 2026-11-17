@@ -37,8 +37,21 @@ CAM = {
     "hero": ((0.85, -2.8, 1.10), (0, -0.05, 1.15), 36, (1200, 1500)),
     "hero_face": ((0.22, -1.05, 1.62), (0, -0.10, 1.72), 65, (1200, 1200)),
 }
+def skin(clean):
+    for img in list(bpy.data.images):
+        stem = bpy.path.abspath(img.filepath) if img.filepath else ""
+        for key in ("_BaseColor", "_Roughness"):
+            if stem.endswith(key + ".png") or stem.endswith(key + "_Clean.png"):
+                plain = stem.replace(key + "_Clean.png", key + ".png")
+                want = plain.replace(key + ".png", key + "_Clean.png") if clean else plain
+                if os.path.exists(want) and want != stem:
+                    img.filepath = want; img.reload()
+
+
 for s in shots:
     name, mode = (s.split(":") + ["dark"])[:2]
+    clean = mode.endswith("+clean"); mode = mode.replace("+clean", "")
+    skin(clean)
     loc, tgt, lens, res = CAM[name]
     studio(mode in ("clay", "studio", "product"))
     if mode == "product":
@@ -52,4 +65,4 @@ for s in shots:
     elif bpy.data.objects.get("Backdrop"):
         bpy.data.objects["Backdrop"].hide_render = True
     bpy.context.view_layer.material_override = bpy.data.materials["Clay"] if mode == "clay" else None
-    R.shoot(f"{name}_{mode}", S(*res), (loc, tgt, lens))
+    R.shoot(f"{name}_{mode}{'_clean' if clean else ''}", S(*res), (loc, tgt, lens))
