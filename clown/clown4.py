@@ -125,7 +125,7 @@ def bloomers(F, coll, mats):
     kk = 0.06; hh = np.clip(0.5 + 0.5 * (P.D - T.D) / kk, 0, 1)
     P.D = (P.D * (1 - hh) + T.D * hh - kk * hh * (1 - hh)).astype(np.float32)
     # waist sash hugging the belly line
-    G = C3.cloth_from_body(F, tuple(P.lo), tuple(P.lo + P.h * (P.n - 1)), 0.022, 0.034)
+    G = C3.cloth_from_body(F, (-0.42, -0.42, 0.18), (0.42, 0.32, 1.16), 0.022, 0.034)
     n = np.array([0, -0.27, 0.963]); n /= np.linalg.norm(n)
     plane = X * n[0] + (Y + 0.20) * n[1] + (Z - 1.005) * n[2]
     sash = np.maximum(G.D, np.abs(plane + 0.020) - 0.028)
