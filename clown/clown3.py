@@ -162,8 +162,8 @@ def build_shirt(F, coll, mats):
     S = cloth_from_body(F, (-0.75, -0.40, 0.95), (0.75, 0.32, 1.68), 0.010, 0.013)
     X, Y, Z = grid(S)
     # cut: neck hole, wrists, hem tucked into the trousers
-    S.D = np.maximum(S.D, 0.105 - np.sqrt(X ** 2 + (Y - 0.015) ** 2) - np.clip((1.585 - Z) * 4, 0, None))
-    S.D = np.maximum(S.D, Z - 1.66)
+    S.D = np.maximum(S.D, 0.118 - np.sqrt(X ** 2 + (Y - 0.015) ** 2) - np.clip((1.560 - Z) * 4, 0, None))
+    S.D = np.maximum(S.D, Z - 1.605)
     S.D = np.maximum(S.D, 0.985 - Z)
     for sx in (1, -1):
         t, s, e, w, d = arm_axis_terms(X, Y, Z, sx)
@@ -253,8 +253,8 @@ def build_suspenders(S, coll, mats):
 def build_trims(coll, mats, buttons):
     out = []
     R = Field((-0.27, -0.27, 1.48), (0.27, 0.27, 1.72), 0.0024 if not QUICK else 0.004)
-    B.torus_frill(R, (0, 0.012, 1.592), (0, -0.16, 1), 0.150, 0.030, 30, 0.020)
-    B.torus_frill(R, (0, 0.012, 1.618), (0, -0.16, 1), 0.122, 0.024, 26, 0.016)
+    B.torus_frill(R, (0, 0.012, 1.600), (0, -0.10, 1), 0.142, 0.030, 30, 0.020)
+    B.torus_frill(R, (0, 0.012, 1.628), (0, -0.10, 1), 0.116, 0.024, 26, 0.016)
     r = B.field_object(R, "Ruff", coll, iters=1); r.data.materials.append(mats["ruff"]); out.append(r)
     for sx in (1, -1):
         s, e, w, d = A.arm_points(sx)
