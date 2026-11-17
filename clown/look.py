@@ -40,6 +40,16 @@ CAM = {
 for s in shots:
     name, mode = (s.split(":") + ["dark"])[:2]
     loc, tgt, lens, res = CAM[name]
-    studio(mode in ("clay", "studio"))
+    studio(mode in ("clay", "studio", "product"))
+    if mode == "product":
+        if not bpy.data.objects.get("Backdrop"):
+            bpy.ops.mesh.primitive_plane_add(size=14, location=(0, 0, 0.001))
+            bd = bpy.context.object; bd.name = "Backdrop"
+            m, nt, b = B.nodes_mat("Backdrop"); b.inputs["Base Color"].default_value = (0.018, 0.018, 0.019, 1)
+            b.inputs["Roughness"].default_value = 0.9; bd.data.materials.append(m)
+        bpy.data.objects["Backdrop"].hide_render = False
+        sc.world.node_tree.nodes["Background"].inputs[0].default_value = (0.008, 0.008, 0.009, 1)
+    elif bpy.data.objects.get("Backdrop"):
+        bpy.data.objects["Backdrop"].hide_render = True
     bpy.context.view_layer.material_override = bpy.data.materials["Clay"] if mode == "clay" else None
     R.shoot(f"{name}_{mode}", S(*res), (loc, tgt, lens))

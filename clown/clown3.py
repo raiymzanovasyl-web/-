@@ -28,7 +28,10 @@ def add_blood(m, wet=0.12, color=(0.16, 0.004, 0.007)):
     b = [n for n in nt.nodes if n.type == 'BSDF_PRINCIPLED'][0]
     at = nt.nodes.new("ShaderNodeVertexColor"); at.layer_name = "blood"
     sep = nt.nodes.new("ShaderNodeSeparateColor"); nt.links.new(at.outputs["Color"], sep.inputs[0])
-    fac = sep.outputs[0]
+    amt = nt.nodes.new("ShaderNodeMath"); amt.operation = 'MULTIPLY'; amt.name = "BloodAmount"
+    amt.inputs[1].default_value = 1.0
+    nt.links.new(sep.outputs[0], amt.inputs[0])
+    fac = amt.outputs[0]
     mc = nt.nodes.new("ShaderNodeMix"); mc.data_type = 'RGBA'
     nt.links.new(fac, mc.inputs["Factor"]); mc.inputs[7].default_value = (*color, 1)
     bc = b.inputs["Base Color"]
