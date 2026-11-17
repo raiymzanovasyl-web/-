@@ -161,7 +161,7 @@ def mat_skin():
     bump = N(nt, "ShaderNodeBump", Strength=0.35, Distance=0.0006)
     L(nt, mixh.outputs[0], bump.inputs["Height"])
     L(nt, bump.outputs[0], b.inputs["Normal"])
-    rough = N(nt, "ShaderNodeMapRange", **{"From Min": 0.0, "From Max": 1.0, "To Min": 0.62, "To Max": 0.32})
+    rough = N(nt, "ShaderNodeMapRange", **{"From Min": 0.0, "From Max": 1.0, "To Min": 0.62, "To Max": 0.45})
     L(nt, attr.outputs["Alpha"], rough.inputs["Value"])
     L(nt, rough.outputs[0], b.inputs["Roughness"])
     return m

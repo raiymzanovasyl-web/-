@@ -84,7 +84,7 @@ def show_costume(on, clay=False):
         bpy.data.collections[name].hide_render = not on
     vl = bpy.context.view_layer
     vl.material_override = bpy.data.materials.get("Clay") if clay else None
-    for n in ("Hair",):
+    for n in ("Hair", "Gums"):
         o = bpy.data.objects.get(n)
         if o:
             o.hide_render = clay
