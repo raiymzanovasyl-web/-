@@ -1,2 +1,5 @@
 __pycache__/
 *.blend1
+clown/v3/clown_v3.blend
+clown/v3/clown_v3_posed.blend
+clown/v3/*.blend1
