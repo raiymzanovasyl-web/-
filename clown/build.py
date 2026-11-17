@@ -34,9 +34,17 @@ def smooth(o, iters=4, factor=0.4):
     return m
 
 
+def outward_normals(o):
+    import bmesh
+    bm = bmesh.new(); bm.from_mesh(o.data)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(o.data); bm.free(); o.data.update()
+
+
 def field_object(F, name, coll, iters=3):
     v, f = F.mesh()
     o = mesh_object(name, v, f)
+    outward_normals(o)
     smooth(o, iters)
     return link(o, coll)
 

@@ -304,11 +304,26 @@ def make_lod(hi, faces, coll):
             d = lo.modifiers.new("dec", 'DECIMATE'); d.ratio = faces * 2 / max(1, tris(lo))
             bpy.ops.object.modifier_apply(modifier="dec")
     lo.data.materials.clear()
+    B.outward_normals(lo)
     for p in lo.data.polygons:
         p.use_smooth = True
     only([lo])
     bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_all(action='SELECT')
     bpy.ops.uv.smart_project(angle_limit=math.radians(60), island_margin=0.004)
+    if hi.name == "Clown_Body":
+        # give the head twice the texel density: scale its islands up, then repack everything
+        import bmesh
+        bm = bmesh.from_edit_mesh(lo.data); uv = bm.loops.layers.uv.active
+        head = [f for f in bm.faces if f.calc_center_median().z > 1.62]
+        if head:
+            c = Vector((0, 0))
+            for f in head:
+                for l in f.loops:
+                    l[uv].uv = l[uv].uv * 2.0
+        bmesh.update_edit_mesh(lo.data)
+        bpy.ops.mesh.select_all(action='SELECT')
+        bpy.ops.uv.select_all(action='SELECT')
+        bpy.ops.uv.pack_islands(margin=0.004, rotate=True, scale=True)
     bpy.ops.object.mode_set(mode='OBJECT')
     return lo
 
@@ -461,7 +476,12 @@ def full():
     lows = {}
     for name, (faces, size) in LOD.items():
         hi = bpy.data.objects[name]
-        lo = make_lod(hi, faces, game)
+        if name == "Teeth":                       # game teeth: one bevel pass, no subdivision
+            hi.modifiers["sub"].show_viewport = False; hi.modifiers["bevel"].segments = 2
+            lo = make_lod(hi, faces, game)
+            hi.modifiers["sub"].show_viewport = True; hi.modifiers["bevel"].segments = 3
+        else:
+            lo = make_lod(hi, faces, game)
         bake_maps(hi, lo, size, tex_dir)
         lows[name] = lo
         print(f"LOD {name}: {tris(hi)} -> {tris(lo)} tris", flush=True)
