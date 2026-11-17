@@ -180,7 +180,7 @@ def build_shirt(F, coll, mats):
     chest = np.exp(-((Z - 1.42) / 0.10) ** 2) * (np.abs(X) < 0.25)
     S.D = np.where(np.abs(S.D) < 0.02, S.D - (0.0022 * np.sin(Z * 80 + 9 * np.sin(X * 11) + 3 * np.sin(X * 31)) * belly
                                                * (0.5 + 0.5 * np.sin(X * 23 + 1.0))
-                                               + 0.0008 * np.sin(X * 150 + Y * 90 + Z * 120)), S.D).astype(np.float32)
+                                               ), S.D).astype(np.float32)
     S.shell(0.006)
     o = B.field_object(S, "Shirt", coll, iters=2); o.data.materials.append(mats["shirt"])
     # placket and buttons down the front, laid on the cloth

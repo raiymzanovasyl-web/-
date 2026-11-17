@@ -69,8 +69,6 @@ def head_field(mask_path, h=0.0009, neck_r=(0.096, 0.086)):
     holes = filled & ~has
     idx = ndimage.distance_transform_edt(~has, return_distances=False, return_indices=True)
     yfill = yf[idx[0], idx[1]]
-    clip = np.where(has, yf + 0.0035, np.where(holes, yfill + 0.016, np.nan))
-    # eye sockets: the two largest holes at eye height
     lab, nlab = ndimage.label(holes)
     eyes = []
     for k in range(1, nlab + 1):
@@ -81,9 +79,17 @@ def head_field(mask_path, h=0.0009, neck_r=(0.096, 0.086)):
         if abs(cz - 1.818) < 0.03 and 0.015 < abs(cx) < 0.07:
             w = F.h * (cells[:, 0].max() - cells[:, 0].min()); hh = F.h * (cells[:, 1].max() - cells[:, 1].min())
             yb = np.nanmean(yfill[cells[:, 0], cells[:, 1]])
-            eyes.append((len(cells), Vector((cx, yb + 0.011, cz)), min(w, hh) * 0.62))
+            eyes.append((len(cells), Vector((cx, yb + 0.015, cz)), min(w, hh) * 0.55))
     eyes.sort(key=lambda e: -e[0])
-    r_eye = min(r for _, _, r in eyes[:2]) * 1.08 if eyes else 0.016
+    sockets = np.zeros_like(holes)
+    for k in range(1, nlab + 1):
+        cells = np.argwhere(lab == k)
+        if len(cells) >= 40:
+            cx = F.lo[0] + F.h * cells[:, 0].mean(); cz = F.lo[2] + F.h * cells[:, 1].mean()
+            if abs(cz - 1.818) < 0.03 and 0.015 < abs(cx) < 0.07:
+                sockets |= lab == k
+    clip = np.where(has, yf + 0.0035, np.where(sockets, yfill + 0.016, np.where(holes, yfill + 0.0035, np.nan)))
+    r_eye = min(r for _, _, r in eyes[:2]) if eyes else 0.014
     INFO["eyes"] = [(c, r_eye) for _, c, r in eyes[:2]]
     F.D = D
     # skull core + neck, kept behind the mask's front surface
@@ -133,7 +139,7 @@ def paint_head(o, blood_attr=True):
     e = np.sqrt((x / 0.064) ** 2 + ((z - mz) / 0.026) ** 2)
     front = y < -0.06
     teeth = (e < 1.0) & front
-    lips = (e >= 1.0) & (e < 1.42) & front
+    lips = (e >= 1.0) & (e < 1.30 + 0.08 * np.sin(x * 140)) & front
     col[teeth] = np.array([0.80, 0.74, 0.58]) * (0.85 + 0.15 * rng.random((teeth.sum(), 1)))
     col[lips] = np.array([0.30, 0.012, 0.016])
     # hair tufts: geometry far outside the skull at the temples
