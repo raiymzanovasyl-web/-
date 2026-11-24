@@ -1,0 +1,397 @@
+From d85138994f2780900bb16eac3a787d1531e38afb Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Tue, 24 Nov 2026 17:25:54 +0000
+Subject: [PATCH] =?UTF-8?q?feat(seo):=20llms.txt,=20=D0=BA=D0=BE=D1=80?=
+ =?UTF-8?q?=D0=BE=D1=82=D0=BA=D0=B8=D0=B5=20title,=20og:image=20=D0=BD?=
+ =?UTF-8?q?=D0=B0=20=D0=B2=D1=81=D0=B5=D1=85=20=D1=81=D1=82=D1=80=D0=B0?=
+ =?UTF-8?q?=D0=BD=D0=B8=D1=86=D0=B0=D1=85,=20=D1=81=D0=B8=D0=B3=D0=BD?=
+ =?UTF-8?q?=D0=B0=D0=BB=D1=8B=20=D1=81=D0=B2=D0=B5=D0=B6=D0=B5=D1=81=D1=82?=
+ =?UTF-8?q?=D0=B8=20=D0=B8=20=D0=B4=D0=BE=D0=B2=D0=B5=D1=80=D0=B8=D1=8F?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- /llms.txt генерируется из каталога (описание компании, разделы, товары с ценами)
+- title главной, каталога, услуг, о компании, контактов и категорий укорочены до 50–60 символов
+- pageOpenGraph(): og:image, og:type, og:site_name больше не теряются на внутренних страницах
+- футер: <address> с контактами и дата обновления <time datetime>
+- JSON-LD: LocalBusiness.foundingDate, WebSite.dateModified; meta author
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_0136zvEUMnaLvqnDRMwYqsyc
+---
+ app/about/page.tsx              |  7 +++---
+ app/catalog/[category]/page.tsx | 11 +++++----
+ app/catalog/page.tsx            |  7 +++---
+ app/contacts/page.tsx           |  7 +++---
+ app/layout.tsx                  |  8 +++++--
+ app/llms.txt/route.ts           | 42 +++++++++++++++++++++++++++++++++
+ app/services/page.tsx           |  7 +++---
+ components/Footer.tsx           | 18 +++++++++++---
+ data/site.ts                    |  3 +++
+ lib/seo.ts                      | 30 +++++++++++++++++++++++
+ 10 files changed, 118 insertions(+), 22 deletions(-)
+ create mode 100644 app/llms.txt/route.ts
+
+diff --git a/app/about/page.tsx b/app/about/page.tsx
+index 2cb72d0..51d3d63 100644
+--- a/app/about/page.tsx
++++ b/app/about/page.tsx
+@@ -1,16 +1,17 @@
+ import { Metadata } from 'next';
+ import { SITE_URL } from '@/data/site';
++import { pageOpenGraph } from '@/lib/seo';
+ 
+ export const metadata: Metadata = {
+-  title: "О компании | ИП Райымжанов — Производство металлоизделий в Бишкеке",
++  title: "О компании ИП Райымжанов — металлоизделия с 2009 года",
+   description: "ИП Райымжанов — собственное производство анкерных болтов, анкерных шайб, ванночек для сварки, тайротов и закладных деталей в Бишкеке с 2009 года. Прямые поставки по выгодным ценам.",
+   keywords: ["производство металлоизделий Бишкек", "анкерные болты Бишкек", "анкерные шайбы", "закладные детали", "тайроты", "ванночки для сварки", "металлоизделия Кыргызстан", "ИП Райымжанов"],
+   alternates: { canonical: `${SITE_URL}/about` },
+-  openGraph: {
++  openGraph: pageOpenGraph({
+     title: "ИП Райымжанов — Производство металлоизделий в Бишкеке",
+     description: "Собственное производство строительного крепежа и металлоизделий в Бишкеке с 2009 года.",
+     url: `${SITE_URL}/about`,
+-  },
++  }),
+ };
+ 
+ export default function AboutPage() {
+diff --git a/app/catalog/[category]/page.tsx b/app/catalog/[category]/page.tsx
+index 16de5bf..65a7fa5 100644
+--- a/app/catalog/[category]/page.tsx
++++ b/app/catalog/[category]/page.tsx
+@@ -8,7 +8,7 @@ import FaqList from '@/components/FaqList';
+ import { formatPrice, productsByCategory } from '@/data/products';
+ import { getCategory, navCategories } from '@/data/catalog';
+ import { SITE_URL } from '@/data/site';
+-import { breadcrumbLd, faqLd, itemListLd } from '@/lib/seo';
++import { breadcrumbLd, faqLd, itemListLd, pageOpenGraph } from '@/lib/seo';
+ 
+ type CategoryParams = { params: Promise<{ category: string }> };
+ 
+@@ -23,18 +23,19 @@ export async function generateMetadata({ params }: CategoryParams): Promise<Meta
+ 
+   const url = `${SITE_URL}/catalog/${cat.id}`;
+ 
+-  const title = `${cat.seoTitle} | ИП Райымжанов`;
++  // Бренд не дописываем: seoTitle уже 45–60 символов, с ним title обрезался в выдаче.
++  const title = cat.seoTitle;
+ 
+   return {
+     title,
+     description: cat.seoDescription,
+     alternates: { canonical: url },
+-    openGraph: {
++    openGraph: pageOpenGraph({
+       title,
+       description: cat.seoDescription,
+       url,
+-      type: 'website',
+-    },
++      image: { url: cat.image, alt: cat.imageAlt },
++    }),
+   };
+ }
+ 
+diff --git a/app/catalog/page.tsx b/app/catalog/page.tsx
+index 08c9790..ce79052 100644
+--- a/app/catalog/page.tsx
++++ b/app/catalog/page.tsx
+@@ -6,19 +6,20 @@ import { products } from '@/data/products';
+ import { productHref } from '@/data/products';
+ import { navCategories } from '@/data/catalog';
+ import { SITE_URL } from '@/data/site';
++import { pageOpenGraph } from '@/lib/seo';
+ import { formatPrice } from '@/data/products';
+ 
+ export const metadata: Metadata = {
+-  title: 'Каталог продукции — анкерные болты, шайбы, ванночки, тайроты | ИП Райымжанов, Бишкек',
++  title: 'Каталог: анкерные болты, шайбы, ванночки — Бишкек',
+   description:
+     'Каталог металлоизделий собственного производства в Бишкеке: анкерные болты и шайбы, ванночки для сварки, тайроты, муфты для арматуры, закладные детали, телескопические стойки. Цены и наличие.',
+   alternates: { canonical: `${SITE_URL}/catalog` },
+-  openGraph: {
++  openGraph: pageOpenGraph({
+     title: 'Каталог металлоизделий — ИП Райымжанов, Бишкек',
+     description:
+       'Анкерные болты, шайбы АШ, ванночки для сварки, тайроты, муфты, закладные детали и стойки — напрямую от производителя.',
+     url: `${SITE_URL}/catalog`,
+-  },
++  }),
+ };
+ 
+ export default function CatalogPage() {
+diff --git a/app/contacts/page.tsx b/app/contacts/page.tsx
+index e40a25e..45031ff 100644
+--- a/app/contacts/page.tsx
++++ b/app/contacts/page.tsx
+@@ -5,9 +5,10 @@ import WhatsAppIcon from '@/components/WhatsAppIcon';
+ import PhoneLink from '@/components/PhoneLink';
+ import { ADDRESS, MAP_EMBED_URL, PHONES, TWO_GIS_URL, WHATSAPP_NUMBER, WORK_HOURS } from '@/data/contacts';
+ import { SITE_URL } from '@/data/site';
++import { pageOpenGraph } from '@/lib/seo';
+ 
+ export const metadata: Metadata = {
+-  title: 'Контакты — +996 779 592 026 | ИП Райымжанов, Профсоюзная 2/1, Бишкек',
++  title: 'Контакты ИП Райымжанов — Профсоюзная 2/1, Бишкек',
+   description:
+     'Контакты ИП Райымжанов: +996 779 592 026, +996 706 646 264. Адрес: Профсоюзная 2/1, Бишкек. Производство анкерных болтов, шайб и металлоизделий.',
+   keywords: [
+@@ -19,12 +20,12 @@ export const metadata: Metadata = {
+     'производство Бишкек',
+   ],
+   alternates: { canonical: `${SITE_URL}/contacts` },
+-  openGraph: {
++  openGraph: pageOpenGraph({
+     title: 'Контакты ИП Райымжанов — Металлоизделия Бишкек',
+     description:
+       'Звоните или пишите нам: +996 779 592 026, +996 706 646 264. Самовывоз со склада в Бишкеке.',
+     url: `${SITE_URL}/contacts`,
+-  },
++  }),
+ };
+ 
+ export default function ContactsPage() {
+diff --git a/app/layout.tsx b/app/layout.tsx
+index 9c1328c..441652d 100644
+--- a/app/layout.tsx
++++ b/app/layout.tsx
+@@ -5,7 +5,7 @@ import './globals.css';
+ import Header from '@/components/Header';
+ import Footer from '@/components/Footer';
+ import WhatsAppButton from '@/components/WhatsAppButton';
+-import { SITE_NAME, SITE_TAGLINE, SITE_URL } from '@/data/site';
++import { CONTENT_UPDATED, FOUNDING_YEAR, SITE_NAME, SITE_TAGLINE, SITE_URL } from '@/data/site';
+ import { ADDRESS, PHONES, WHATSAPP_NUMBER } from '@/data/contacts';
+ 
+ // Inter, ужатый до кириллицы + латиницы (120 КБ, оси 100–900).
+@@ -18,7 +18,7 @@ const inter = localFont({
+   fallback: ['system-ui', 'Segoe UI', 'Arial', 'sans-serif'],
+ });
+ 
+-const TITLE = 'Металлоизделия в Бишкеке от производителя — анкерные болты и шайбы';
++const TITLE = 'Металлоизделия в Бишкеке — анкерные болты и шайбы';
+ const DESCRIPTION =
+   'Производим анкерные болты и шайбы АШ, ванночки для сварки, тайроты, муфты и закладные детали. Цены от производителя, склад в Бишкеке, доставка по Кыргызстану.';
+ 
+@@ -27,6 +27,8 @@ export const metadata: Metadata = {
+   title: TITLE,
+   description: DESCRIPTION,
+   applicationName: SITE_NAME,
++  authors: [{ name: SITE_NAME, url: `${SITE_URL}/about` }],
++  creator: SITE_NAME,
+   alternates: { canonical: '/' },
+   openGraph: {
+     type: 'website',
+@@ -69,6 +71,7 @@ const jsonLd = {
+       url: SITE_URL,
+       image: `${SITE_URL}/og-image.jpg`,
+       logo: `${SITE_URL}/logo-512.png`,
++      foundingDate: FOUNDING_YEAR,
+       telephone: PHONES[0].tel,
+       contactPoint: PHONES.map((phone) => ({
+         '@type': 'ContactPoint',
+@@ -104,6 +107,7 @@ const jsonLd = {
+       url: SITE_URL,
+       name: SITE_NAME,
+       inLanguage: 'ru-KG',
++      dateModified: CONTENT_UPDATED,
+       publisher: { '@id': `${SITE_URL}/#business` },
+     },
+   ],
+diff --git a/app/llms.txt/route.ts b/app/llms.txt/route.ts
+new file mode 100644
+index 0000000..4c8aa94
+--- /dev/null
++++ b/app/llms.txt/route.ts
+@@ -0,0 +1,42 @@
++import { categories } from '@/data/catalog';
++import { formatPrice, productHref, productsByCategory } from '@/data/products';
++import { ADDRESS, PHONES, WORK_HOURS } from '@/data/contacts';
++import { CONTENT_UPDATED, FOUNDING_YEAR, SITE_NAME, SITE_TAGLINE, SITE_URL } from '@/data/site';
++
++// /llms.txt — краткое описание сайта для языковых моделей (https://llmstxt.org/).
++// Собирается из тех же данных, что и каталог, поэтому обновлять руками не нужно.
++export const dynamic = 'force-static';
++
++export function GET() {
++  const lines: string[] = [
++    `# ${SITE_NAME} — ${SITE_TAGLINE}`,
++    '',
++    `> Собственное производство строительных металлоизделий в Бишкеке с ${FOUNDING_YEAR} года: анкерные болты и шпильки, анкерные шайбы АШ, ванночки для сварки, тайроты, муфты для арматуры, закладные детали, телескопические стойки. Цены от производителя, опт и розница, изготовление по чертежам, самовывоз и доставка по Кыргызстану.`,
++    '',
++    `- Адрес: ${ADDRESS.street}, ${ADDRESS.city}, ${ADDRESS.country}`,
++    `- Телефоны: ${PHONES.map((p) => p.display).join(', ')} (WhatsApp)`,
++    `- Режим работы: ${WORK_HOURS}`,
++    `- Оплата: наличные, бартер. Цены в сомах (KGS).`,
++    `- Данные обновлены: ${CONTENT_UPDATED}`,
++    '',
++    '## Основные страницы',
++    '',
++    `- [Каталог продукции](${SITE_URL}/catalog): все товары с ценами`,
++    `- [Услуги](${SITE_URL}/services): изготовление металлоизделий по ГОСТ и чертежам, плазменная резка`,
++    `- [О компании](${SITE_URL}/about)`,
++    `- [Контакты](${SITE_URL}/contacts): телефоны, адрес, карта`,
++  ];
++
++  for (const cat of categories.filter((c) => c.inNav)) {
++    lines.push('', `## ${cat.name}`, '', `- [${cat.name}](${SITE_URL}/catalog/${cat.id}): ${cat.description}`);
++    for (const product of productsByCategory(cat.id)) {
++      const price = formatPrice(product);
++      const priceText = price === 'По запросу' ? 'цена по запросу' : `${price}${/сом/.test(price) ? '' : ' сом'}`;
++      lines.push(`- [${product.name}](${SITE_URL}${productHref(product)}): ${priceText}`);
++    }
++  }
++
++  return new Response(lines.join('\n') + '\n', {
++    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
++  });
++}
+diff --git a/app/services/page.tsx b/app/services/page.tsx
+index 7c28ab8..c09cacd 100644
+--- a/app/services/page.tsx
++++ b/app/services/page.tsx
+@@ -5,18 +5,19 @@ import WhatsAppIcon from '@/components/WhatsAppIcon';
+ import PhoneLink from '@/components/PhoneLink';
+ import { PHONES } from '@/data/contacts';
+ import { SITE_URL } from '@/data/site';
++import { pageOpenGraph } from '@/lib/seo';
+ 
+ export const metadata: Metadata = {
+-  title: 'Услуги — изготовление металлоизделий и плазменная резка в Бишкеке | ИП Райымжанов',
++  title: 'Изготовление металлоизделий и плазменная резка, Бишкек',
+   description:
+     'Услуги завода металлоизделий в Бишкеке: изготовление анкерных болтов и шпилек, шайб АШ, ванночек для сварки, тайротов, плазменная резка и гибка металла по чертежам заказчика.',
+   alternates: { canonical: `${SITE_URL}/services` },
+-  openGraph: {
++  openGraph: pageOpenGraph({
+     title: 'Услуги — ИП Райымжанов, Бишкек',
+     description:
+       'Изготовление крепежа и металлоизделий по ГОСТ и по чертежам: анкерные болты, шайбы, ванночки, тайроты, плазменная резка.',
+     url: `${SITE_URL}/services`,
+-  },
++  }),
+ };
+ 
+ const services = [
+diff --git a/components/Footer.tsx b/components/Footer.tsx
+index 0a97ac0..8b50d17 100644
+--- a/components/Footer.tsx
++++ b/components/Footer.tsx
+@@ -4,6 +4,7 @@ import WhatsAppLink from './WhatsAppLink';
+ import PhoneLink from './PhoneLink';
+ import { ADDRESS, PHONES, WORK_HOURS } from '@/data/contacts';
+ import { navCategories } from '@/data/catalog';
++import { CONTENT_UPDATED, FOUNDING_YEAR } from '@/data/site';
+ 
+ export default function Footer() {
+   return (
+@@ -17,7 +18,7 @@ export default function Footer() {
+               </div>
+               <div className="text-white font-bold text-xl">ИП Райымжанов</div>
+             </div>
+-            <p className="text-sm">Производство металлоизделий в Бишкеке с 2009 года.</p>
++            <p className="text-sm">Производство металлоизделий в Бишкеке с {FOUNDING_YEAR} года.</p>
+           </div>
+ 
+           <div>
+@@ -35,7 +36,7 @@ export default function Footer() {
+ 
+           <div>
+             <h4 className="text-white font-semibold mb-4">Контакты</h4>
+-            <div className="space-y-3 text-sm">
++            <address className="space-y-3 text-sm not-italic">
+               {PHONES.map((phone) => (
+                 <div key={phone.tel}>
+                   <PhoneLink tel={phone.tel} source="footer" className="hover:text-white">
+@@ -47,7 +48,7 @@ export default function Footer() {
+                 {ADDRESS.street}, {ADDRESS.city}
+               </div>
+               <div>{WORK_HOURS}</div>
+-            </div>
++            </address>
+           </div>
+ 
+           <div>
+@@ -65,6 +66,17 @@ export default function Footer() {
+ 
+         <div className="text-center text-xs pt-12 border-t border-slate-800 mt-12">
+           © {new Date().getFullYear()} ИП Райымжанов. Все права защищены.
++          <span className="block mt-2">
++            Информация обновлена:{' '}
++            <time dateTime={CONTENT_UPDATED}>
++              {new Date(CONTENT_UPDATED).toLocaleDateString('ru-RU', {
++                day: 'numeric',
++                month: 'long',
++                year: 'numeric',
++                timeZone: 'UTC',
++              })}
++            </time>
++          </span>
+         </div>
+       </div>
+     </footer>
+diff --git a/data/site.ts b/data/site.ts
+index ac7c8af..4a46133 100644
+--- a/data/site.ts
++++ b/data/site.ts
+@@ -3,6 +3,9 @@ export const SITE_URL =
+ 
+ export const SITE_NAME = 'ИП Райымжанов';
+ 
++/** Год основания — для текстов и разметки LocalBusiness.foundingDate */
++export const FOUNDING_YEAR = '2009';
++
+ export const SITE_TAGLINE = 'Производство металлоизделий в Бишкеке';
+ 
+ /**
+diff --git a/lib/seo.ts b/lib/seo.ts
+index 0299dac..0bd021a 100644
+--- a/lib/seo.ts
++++ b/lib/seo.ts
+@@ -1,3 +1,4 @@
++import type { Metadata } from 'next';
+ import { SITE_NAME, SITE_URL } from '@/data/site';
+ import type { Product } from '@/data/products';
+ import { productAlt } from '@/data/products';
+@@ -5,6 +6,35 @@ import type { Category, Faq } from '@/data/catalog';
+ 
+ type Crumb = { name: string; url: string };
+ 
++const DEFAULT_OG_IMAGE = {
++  url: '/og-image.jpg',
++  width: 1200,
++  height: 630,
++  alt: 'ИП Райымжанов — производство металлоизделий в Бишкеке',
++};
++
++/**
++ * Open Graph для страницы. В Next openGraph страницы целиком заменяет
++ * openGraph из layout, поэтому без этого хелпера на внутренних страницах
++ * пропадали og:image, og:type и og:site_name.
++ */
++export function pageOpenGraph(og: {
++  title: string;
++  description: string;
++  url: string;
++  image?: { url: string; alt: string; width?: number; height?: number };
++}): NonNullable<Metadata['openGraph']> {
++  return {
++    type: 'website',
++    locale: 'ru_KG',
++    siteName: SITE_NAME,
++    title: og.title,
++    description: og.description,
++    url: og.url,
++    images: [og.image ?? DEFAULT_OG_IMAGE],
++  };
++}
++
+ export function breadcrumbLd(items: Crumb[]) {
+   return {
+     '@context': 'https://schema.org',
+-- 
+2.43.0
+
